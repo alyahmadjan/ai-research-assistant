@@ -1,207 +1,150 @@
-# AI Research Assistant
+# AI Research Assistant (RAG)
 
-A RAG (Retrieval-Augmented Generation) powered assistant for researchers, students, and analysts. Upload PDFs, whitepapers, and reports — then ask questions like *"What are the main findings?"* or *"Compare the arguments across these papers."*
+A portfolio-ready full-stack application for uploading research documents, indexing them into a vector store, and asking grounded questions with citations.
 
-![Architecture](https://via.placeholder.com/800x300?text=Architecture+Diagram)
+## What this project does
 
----
+- Uploads PDF, TXT, DOCX, and optional HTML documents
+- Extracts and cleans text
+- Chunks documents into retrieval-friendly passages
+- Creates embeddings and stores them in a vector database
+- Answers questions with retrieval-augmented generation
+- Returns citations and source passages
+- Keeps chat history
+- Exposes production-style API endpoints
+- Includes a Next.js UI for upload, document browsing, and chat
 
-## Features
+## Stack
 
-- Upload PDFs, TXT, and Markdown files
-- Ask natural language questions grounded in your documents
-- Inline citations with page references
-- Select specific documents to scope your queries
-- Sources panel showing retrieved chunks with relevance scores
-- Duplicate detection — same document won't be ingested twice
+- **Frontend:** Next.js, React, Tailwind CSS
+- **Backend:** FastAPI, SQLAlchemy, SQLite
+- **Vector store:** Chroma
+- **LLM / embeddings:** Local models only for the free deployment path
+- **Document parsing:** pypdf, python-docx, BeautifulSoup
 
----
+## Architecture choices
 
-## Tech Stack
+This implementation follows the project plan closely and makes a few pragmatic choices:
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | FastAPI + Python 3.11 |
-| RAG pipeline | LangChain |
-| Embeddings | OpenAI `text-embedding-3-small` |
-| Vector DB | ChromaDB (persistent) |
-| LLM | GPT-4o-mini (or Claude via Anthropic) |
-| Frontend | React 18 + Vite + Tailwind CSS |
-| Deployment | Render (backend) + Vercel (frontend) |
+1. **Local development uses SQLite + Chroma** so the app runs easily on a laptop.
+2. **Document processing uses FastAPI BackgroundTasks** for asynchronous ingestion in v1.
+3. **The free-deployment branch removes paid API dependencies** and uses a small local model instead of OpenAI so the codebase runs without an API key.
+4. **OCR is intentionally not included** because the spec explicitly excludes it from version 1.
+5. **Chat history is stored in SQLite** and retrieved by conversation ID.
+6. **Summarize and compare endpoints** are implemented with the same RAG pipeline, tuned for those task types.
 
----
+## Folder structure
 
-## Architecture
-
-```
-User uploads PDF
-      │
-      ▼
-Chunk text (800 tokens, 100 overlap)
-      │
-      ▼
-Embed chunks (text-embedding-3-small)
-      │
-      ▼
-Store in ChromaDB with metadata (filename, page)
-
-User asks question
-      │
-      ▼
-Embed question
-      │
-      ▼
-Top-6 cosine similarity search in ChromaDB
-      │
-      ▼
-Build context prompt (question + retrieved chunks)
-      │
-      ▼
-LLM generates grounded answer with citations
+```text
+ai-research-assistant/
+├── frontend/
+├── backend/
+├── infra/
+└── README.md
 ```
 
----
+The backend folder matches the document’s architecture: ingestion, chunking, embeddings, indexing, retrieval, generation, chat, projects, and health.
 
-## Local Development
+## Local setup
 
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- OpenAI API key (or Anthropic)
-
-### Backend
+### 1) Backend
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
-
-uvicorn main:app --reload
-# API running at http://localhost:8000
-# Docs at http://localhost:8000/docs
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Frontend
+### 2) Frontend
 
 ```bash
 cd frontend
+cp .env.local.example .env.local
 npm install
 npm run dev
-# App running at http://localhost:5173
 ```
 
-### Docker (full stack)
+### 3) Open the app
 
-```bash
-cp .env.example .env
-# Edit .env with your API key
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8000`
+- Health check: `http://localhost:8000/health`
 
-docker-compose up --build
-# App at http://localhost
-# API at http://localhost:8000
-```
+## Environment variables
 
----
+### Backend
 
-## API Reference
+- `APP_NAME`
+- `ENVIRONMENT`
+- `DATABASE_URL`
+- `CHROMA_DIR`
+- `UPLOAD_DIR`
+- `LOCAL_LLM_MODEL`
+- `MAX_UPLOAD_MB`
+- `CORS_ORIGINS`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check |
-| POST | `/upload` | Upload a document (multipart/form-data) |
-| GET | `/documents` | List all uploaded documents |
-| DELETE | `/documents/{doc_id}` | Remove a document |
-| POST | `/query` | Ask a question |
+### Frontend
 
-### Query request body
-```json
-{
-  "question": "What are the main findings?",
-  "doc_ids": ["uuid-1", "uuid-2"]  // optional, omit to search all
-}
-```
+- `NEXT_PUBLIC_API_BASE_URL`
 
----
+## Deployment notes
 
-## Deployment
+### Free deployment path
+- **Frontend:** Vercel Hobby
+- **Backend API:** Hugging Face Docker Space
+- **Storage:** local runtime storage for the demo path
+- **LLM/embeddings:** fully local, so no API key is required
 
-### Backend → Render
+### Backend
+- Build with Docker from `backend/Dockerfile`
+- The backend uses a small local model (`google/flan-t5-small` by default) so it can run without OpenAI
+- Put any environment overrides in the Space settings
+- The current free-tier design is best for a portfolio demo rather than always-on production
 
-1. Push repo to GitHub
-2. Go to [render.com](https://render.com) → New Web Service → connect repo
-3. Set root directory to `backend`
-4. Build command: `pip install -r requirements.txt`
-5. Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-6. Add environment variables in Render dashboard (OPENAI_API_KEY etc.)
-7. Add a 1 GB Disk mounted at `/opt/render/project/src/chroma_db`
+### Frontend
+- Deploy to Vercel or another Next.js host
+- Set `NEXT_PUBLIC_API_BASE_URL` to the backend URL
 
-### Frontend → Vercel
+### Smoke test checklist
+- Upload a document
+- Confirm it appears in the document list
+- Ask a question
+- Verify citations point to actual chunks
+- Fetch a previous conversation
 
-1. Go to [vercel.com](https://vercel.com) → New Project → connect repo
-2. Set root directory to `frontend`
-3. Add environment variable: `VITE_API_URL=https://your-backend.onrender.com`
-4. Deploy
+## API endpoints
 
----
+Implemented endpoints:
 
-## Evaluation
+- `GET /health`
+- `POST /upload`
+- `GET /documents`
+- `GET /documents/{document_id}`
+- `DELETE /documents/{document_id}`
+- `POST /documents/{document_id}/process`
+- `GET /documents/{document_id}/chunks`
+- `POST /chat`
+- `GET /chat/{conversation_id}`
+- `POST /search`
+- `POST /compare`
+- `POST /summarize`
+- `POST /feedback`
 
-Run RAGAS evaluation after ingesting test documents:
+## Assumptions and gaps handled
 
-```bash
-cd backend
-python eval.py
-```
+- The spec does not mandate a specific vector DB, so this build uses **Chroma** locally.
+- The spec does not require auth, so the app is single-user / demo-friendly in v1.
+- The spec mentions projects and analytics, but does not require them in the first deliverable; the schema is designed to support them later.
+- The spec mentions background jobs; v1 uses background tasks and a status field, which is practical for a portfolio project and simple to run.
+- The free-deployment version intentionally skips paid API keys and uses local embeddings plus a local generation model instead.
 
-| Metric | Score |
-|--------|-------|
-| Faithfulness | — |
-| Answer Relevancy | — |
-| Context Precision | — |
-| Context Recall | — |
+## Suggested next improvements
 
-*Scores are populated after running `eval.py` with your test documents.*
+- Move ingestion to a task queue such as Celery or RQ
+- Add real user accounts
+- Add object storage for uploads
+- Swap Chroma for a managed vector DB
+- Add richer answer evaluation and feedback analytics
 
----
-
-## What I'd improve next
-
-- **Hybrid search** — combine BM25 keyword + vector for better exact-match recall
-- **Re-ranking** — use a cross-encoder to re-rank top-k results before generation
-- **Streaming responses** — stream LLM output token-by-token for faster perceived response
-- **Multi-user sessions** — user accounts so each user has their own document library
-- **OCR support** — handle scanned PDFs using Tesseract
-
----
-
-## Project Structure
-
-```
-research-assistant/
-├── backend/
-│   ├── main.py          # FastAPI app + endpoints
-│   ├── ingest.py        # PDF parsing, chunking, embedding, storage
-│   ├── retriever.py     # Query embedding, similarity search, LLM call
-│   ├── config.py        # Settings and environment variables
-│   ├── eval.py          # RAGAS evaluation script
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx
-│   │   ├── api.js
-│   │   └── components/
-│   │       ├── DocumentPanel.jsx
-│   │       ├── ChatPanel.jsx
-│   │       └── SourcesPanel.jsx
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   └── vercel.json
-├── docker-compose.yml
-├── render.yaml
-└── README.md
-```
+> Note: the backend environment template lives at `backend/.env.example`.

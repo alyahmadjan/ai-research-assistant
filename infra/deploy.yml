@@ -1,0 +1,13 @@
+# Free deployment outline for the no-API-key version
+# Backend: Hugging Face Docker Space
+# Frontend: Vercel Hobby
+# Model: local Hugging Face seq2seq model (google/flan-t5-small by default)
+
+backend:
+  dockerfile: backend/Dockerfile
+  port: 8000
+
+frontend:
+  framework: nextjs
+  env:
+    NEXT_PUBLIC_API_BASE_URL: https://your-huggingface-space-url
