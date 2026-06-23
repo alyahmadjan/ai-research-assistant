@@ -9,6 +9,14 @@ export type DocumentItem = {
   updated_at: string;
 };
 
+export type UploadResponse = {
+  document_id: string;
+  filename: string;
+  status: string;
+  pages: number;
+  chunks_created: number;
+};
+
 export type SourceItem = {
   document_id: string;
   document_filename: string;

@@ -73,12 +73,12 @@ class SearchResponse(BaseModel):
 
 
 class CompareRequest(BaseModel):
-    document_ids: list[str] = Field(min_length=2)
+    document_ids: list[str] = Field(default_factory=list)
     question: str | None = None
 
 
 class SummarizeRequest(BaseModel):
-    document_ids: list[str] = Field(min_length=1)
+    document_ids: list[str] = Field(default_factory=list)
     focus: str | None = None
 
 

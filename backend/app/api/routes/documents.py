@@ -23,7 +23,7 @@ retrieval_service = RetrievalService()
 
 @router.get("/documents", response_model=list[DocumentOut])
 def list_documents(offset: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    return doc_repo.list(db, offset=offset, limit=limit)
+    return doc_repo.list_documents(db, offset=offset, limit=limit)  # renamed to avoid shadowing built-in list
 
 
 @router.get("/documents/{document_id}", response_model=DocumentOut)

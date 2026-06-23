@@ -148,3 +148,9 @@ Implemented endpoints:
 - Add richer answer evaluation and feedback analytics
 
 > Note: the backend environment template lives at `backend/.env.example`.
+
+
+## Current behavior
+- Uploading documents auto-activates the newly uploaded files for chat and summarize.
+- If no documents are explicitly selected, chat and summarize fall back to the most recent upload.
+- Compare requires at least two active documents.

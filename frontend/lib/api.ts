@@ -1,6 +1,24 @@
-import { ChatResponse, Conversation, DocumentItem, SourceItem } from "./types";
+import { ChatResponse, Conversation, DocumentItem, SourceItem, UploadResponse } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
+async function readErrorMessage(response: Response): Promise<string> {
+  const text = await response.text();
+  if (!text) return `Request failed: ${response.status}`;
+
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed?.detail === "string") return parsed.detail;
+    if (Array.isArray(parsed?.detail)) {
+      return parsed.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join(", ") || text;
+    }
+    if (typeof parsed?.message === "string") return parsed.message;
+  } catch {
+    // Skipped: the backend may return plain text for unexpected errors.
+  }
+
+  return text;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -12,8 +30,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
+    throw new Error(await readErrorMessage(response));
   }
 
   return response.json() as Promise<T>;
@@ -23,7 +40,7 @@ export async function listDocuments(): Promise<DocumentItem[]> {
   return request<DocumentItem[]>("/documents");
 }
 
-export async function uploadDocuments(files: File[]): Promise<{ document_id: string; filename: string; status: string; pages: number; chunks_created: number }[]> {
+export async function uploadDocuments(files: File[]): Promise<UploadResponse[]> {
   const form = new FormData();
   files.forEach((file) => form.append("files", file));
 
@@ -33,8 +50,7 @@ export async function uploadDocuments(files: File[]): Promise<{ document_id: str
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Upload failed: ${response.status}`);
+    throw new Error(await readErrorMessage(response));
   }
 
   return response.json();

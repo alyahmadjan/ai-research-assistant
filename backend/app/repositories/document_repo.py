@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,8 +17,12 @@ class DocumentRepository:
     def get(self, db: Session, document_id: str) -> Document | None:
         return db.get(Document, document_id)
 
-    def list(self, db: Session, offset: int = 0, limit: int = 50) -> list[Document]:
+    def list_documents(self, db: Session, offset: int = 0, limit: int = 50) -> list[Document]:
         stmt = select(Document).order_by(Document.created_at.desc()).offset(offset).limit(limit)
+        return list(db.scalars(stmt).all())
+
+    def list_recent(self, db: Session, limit: int = 1) -> list[Document]:
+        stmt = select(Document).order_by(Document.created_at.desc()).limit(limit)
         return list(db.scalars(stmt).all())
 
     def delete(self, db: Session, document: Document) -> None:
