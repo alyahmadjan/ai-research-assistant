@@ -20,6 +20,7 @@ python-dotenv>=1.0,<2
 transformers>=4.44,<5
 sentencepiece>=0.2,<1
 torch>=2.3,<3
+psycopg2-binary==2.9.9
 
 # Skipped from the free path:
 # openai>=1.40,<2
