@@ -21,7 +21,18 @@ export default function UploadPage() {
   return (
     <div className="space-y-6">
       <UploadDropzone onUploaded={refresh} />
-      <DocumentList documents={documents} selected={selected} onToggle={(id) => setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])} onRefresh={refresh} />
+      <DocumentList
+        documents={documents}
+        selected={selected}
+        onToggle={(id) =>
+          setSelected((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+          )
+        }
+        onRefresh={refresh}
+        onSelectAll={() => setSelected(documents.map((doc) => doc.id))}
+        onClear={() => setSelected([])}
+      />
     </div>
   );
 }
